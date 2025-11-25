@@ -1,1 +1,0 @@
-# the-classification-of-corn-diseases
