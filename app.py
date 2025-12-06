@@ -1,7 +1,9 @@
 import streamlit as st
-import numpy as np
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
+import tensorflow as tf
+from model_download import download_model
+
+download_model()  # โหลดจาก GDrive ก่อนใช้
+model = tf.keras.models.load_model("model.h5")
 
 st.title("🌽 ระบบจำแนกโรคใบข้าวโพดด้วย CNN")
 st.write("อัปโหลดรูปใบข้าวโพด แล้วระบบจะช่วยจำแนกโรคให้")
@@ -32,3 +34,4 @@ if uploaded:
     class_idx = np.argmax(pred)
 
     st.subheader(f"🎯 ผลการจำแนก: {classes[class_idx]}")
+
