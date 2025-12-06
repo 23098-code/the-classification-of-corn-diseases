@@ -5,6 +5,7 @@ from keras.utils import load_img, img_to_array
 import numpy as np
 import gdown
 import os
+from tensorflow.keras.models import load_model
 
 @st.cache_resource
 def load_cnn_model():
@@ -37,5 +38,6 @@ if uploaded:
     class_idx = np.argmax(pred)
 
     st.subheader(f"🎯 ผลการจำแนก: {classes[class_idx]}")
+
 
 
