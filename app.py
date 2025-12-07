@@ -2,67 +2,52 @@ import streamlit as st
 from tensorflow.keras.models import load_model
 import numpy as np
 from PIL import Image
-import cv2
 
-# โหลดโมเดล
+# โหลดโมเดลครั้งเดียว
 @st.cache_resource
 def load_cnn_model():
-    return load_model("model.h5")  # <--- โหลดผ่าน LFS แล้วใช้ได้เลย
+    return load_model("model.h5")
 
 model = load_cnn_model()
 
-# mapping label
-classes = ["ใบไหม้ (Leaf Blight)", "ใบจุด (Leaf Spot)", "ปกติ (Healthy)"]
+# Class label ต้องแก้ตามโมเดลของเธอ
+CLASS_NAMES = ["Leaf Blight", "Healthy", "Rust"]
 
-# ============ UI STYLE ============#
-st.set_page_config(
-    page_title="🌽 ระบบจำแนกโรคใบข้าวโพด",
-    page_icon="🌽",
-    layout="centered"
-)
+# ข้อมูลโรค + วิธีดูแลรักษา
+TREATMENT = {
+    "Leaf Blight": "• ตัดใบที่เป็นโรคออกและเผาทำลาย\n• ใช้สารป้องกันกำจัดเชื้อราเช่น แมนโคเซบ หรือ โพรพิเนบ ตามคำแนะนำ\n• เลือกพันธุ์ที่ต้านทานโรค และเว้นระยะปลูกให้โปร่ง",
+    "Rust": "• พ่นสารป้องกันเชื้อราเช่น ไตรไซคลาโซล หรือ โพรพิเนบ\n• หมั่นตรวจแปลงสม่ำเสมอ ลดความชื้นในแปลง\n• ถอนต้นที่รุนแรงออกเพื่อลดการแพร่กระจาย",
+    "Healthy": "• พืชแข็งแรง ปกติดี 🎉\n• รดน้ำสม่ำเสมอ ใส่ปุ๋ยตามระยะ\n• ตรวจใบทุกสัปดาห์เพื่อเฝ้าระวังโรค"
+}
+
+# ---------------- UI ---------------- #
+st.set_page_config(page_title="Corn Disease Classification", layout="centered")
 
 st.markdown("""
-<style>
-    .main { background-color:#f7fff3; }     
-    .title { text-align:center;
-             color:#2d6a4f;
-             font-size:35px;
-             font-weight:700;}
-    .sub {text-align:center; font-size:18px; color:#52796f; margin-top:-10px;}
-    .footer {text-align:center; font-size:13px; color:#6c757d; margin-top:30px;}
-</style>
+<h2 style='text-align:center; color:#2E8B57;'>🌽 ระบบจำแนกโรคใบข้าวโพดด้วย CNN</h2>
+<p style='text-align:center;'>อัปโหลดรูปใบข้าวโพด แล้วกดปุ่มวิเคราะห์เพื่อดูผลการตรวจโรค</p>
+<hr>
 """, unsafe_allow_html=True)
 
-# ============ HEADER ============#
-st.markdown("<h1 class='title'>🌽 ระบบจำแนกโรคใบข้าวโพดด้วย CNN</h1>", unsafe_allow_html=True)
-st.markdown("<p class='sub'>อัปโหลดภาพใบข้าวโพด แล้ว AI จะทำนายให้ทันที</p>", unsafe_allow_html=True)
-st.write("")
+uploaded_file = st.file_uploader("📤 อัปโหลดภาพใบข้าวโพด", type=["jpg", "jpeg", "png"])
 
-uploaded_file = st.file_uploader("📤 เลือกไฟล์รูปภาพใบข้าวโพด", type=["jpg","jpeg","png"])
+if uploaded_file:
+    img = Image.open(uploaded_file).convert("RGB")
+    st.image(img, caption="ภาพที่อัปโหลด", width=300)
 
-# ============ Prediction ============#
-if uploaded_file is not None:
-    image = Image.open(uploaded_file)
-    img = np.array(image)
-    img_resized = cv2.resize(img, (150,150))
-    img_resized = img_resized/255.0
-    img_input = np.expand_dims(img_resized, axis=0)
+    # ปุ่มประมวลผล
+    if st.button("🔍 วิเคราะห์รูปภาพ"):
+        img_resized = img.resize((150, 150))
+        img_array = np.array(img_resized) / 255.0
+        img_array = np.expand_dims(img_array, 0)
 
-    prediction = model.predict(img_input)[0]
-    pred_index = np.argmax(prediction)
-    confidence = prediction[pred_index] * 100
+        prediction = model.predict(img_array)
+        class_index = np.argmax(prediction)
+        result = CLASS_NAMES[class_index]
 
-    # แสดงภาพ
-    st.image(image, caption="🖼 ภาพที่อัปโหลด", use_column_width=True)
+        st.success(f"📌 ผลการวิเคราะห์: **{result}**")
 
-    st.success(f"### 🔍 ผลการจำแนก: **{classes[pred_index]}**")
-    st.write(f"📊 ความมั่นใจของโมเดล: **{confidence:.2f}%**")
-
+        st.subheader("🛠 วิธีดูแลรักษา / แนะนำการป้องกัน")
+        st.info(TREATMENT[result])
 else:
-    st.info("⬆ กรุณาอัปโหลดรูปภาพก่อนเริ่มทำนาย")
-
-
-# Footer
-st.markdown("""
-<br><p class='footer'>พัฒนาโดยใช้ Convolutional Neural Network (CNN) สำหรับโครงงานวิทยาศาสตร์</p>
-""", unsafe_allow_html=True)
+    st.warning("กรุณาอัปโหลดรูปภาพก่อน")
