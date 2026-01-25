@@ -57,7 +57,7 @@ class_names = [
 # ==============================
 uploaded_file = st.file_uploader(
     "📤 อัปโหลดภาพใบข้าวโพด",
-    type=["jpg", "jpeg", "png"]
+    type=["jpg", "jpeg", "png","jfif","WEBP"]
 )
 
 if uploaded_file is not None:
