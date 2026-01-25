@@ -1,7 +1,6 @@
 import streamlit as st
 import numpy as np
 from PIL import Image
-import tensorflow as tf
 from tensorflow.keras.models import load_model
 
 # =========================
@@ -13,11 +12,10 @@ st.set_page_config(
     layout="centered"
 )
 
-CONFIDENCE_THRESHOLD = 0.50  # 50%
+CONFIDENCE_THRESHOLD = 0.50
 
 # =========================
-# CLASS NAMES
-# (ต้องเรียงตรงกับตอน train โมเดล)
+# CLASS NAMES (ต้องเรียงตรงกับตอน train)
 # =========================
 class_names = [
     "Blight (โรคใบไหม้)",
@@ -39,6 +37,15 @@ except Exception as e:
     st.stop()
 
 # =========================
+# GET MODEL INPUT SIZE
+# =========================
+try:
+    _, img_height, img_width, img_channels = model.input_shape
+except:
+    st.error("❌ ไม่สามารถอ่าน input shape ของโมเดลได้")
+    st.stop()
+
+# =========================
 # IMAGE UPLOAD
 # =========================
 uploaded_file = st.file_uploader(
@@ -57,9 +64,8 @@ if uploaded_file is not None:
         st.info("⏳ กำลังวิเคราะห์...")
 
         # -------- PREPROCESS --------
-        img_size = (224, 224)  # ต้องตรงกับตอน train
-        img = image.resize(img_size)
-        img_array = np.array(img) / 255.0
+        img = image.resize((img_width, img_height))
+        img_array = np.array(img, dtype=np.float32) / 255.0
         img_array = np.expand_dims(img_array, axis=0)
 
         # -------- PREDICT --------
@@ -67,19 +73,19 @@ if uploaded_file is not None:
         confidence = float(np.max(prediction))
         predicted_class = int(np.argmax(prediction))
 
-        # -------- DECISION --------
+        # -------- RESULT --------
         if confidence < CONFIDENCE_THRESHOLD:
             st.warning(
                 f"⚠️ โมเดลไม่มั่นใจเพียงพอ ({confidence*100:.2f}%)\n\n"
-                "กรุณาถ่ายภาพใหม่ให้ชัดขึ้น\n"
-                "- ใบเดียว\n"
-                "- แสงสว่างเพียงพอ\n"
-                "- ไม่มีพื้นหลังรบกวน"
+                "กรุณาถ่ายภาพใหม่:\n"
+                "- ใบเดียวชัด ๆ\n"
+                "- แสงสว่างพอ\n"
+                "- ไม่เบลอ / ไม่ไกล"
             )
         else:
             st.success(f"🌱 ผลการทำนาย: **{class_names[predicted_class]}**")
             st.write(f"📊 ความมั่นใจของโมเดล: **{confidence*100:.2f}%**")
 
-            st.markdown("### 🔎 ความน่าจะเป็นแต่ละโรค")
+            st.markdown("### 🔎 ความน่าจะเป็นแต่ละคลาส")
             for i, prob in enumerate(prediction[0]):
                 st.write(f"- {class_names[i]}: {prob*100:.2f}%")
