@@ -15,14 +15,13 @@ st.set_page_config(
 CONFIDENCE_THRESHOLD = 0.50
 
 # =========================
-# CLASS NAMES (4 CLASSES)
-# ⚠️ ต้องเรียงตรงกับตอน train
+# ✅ CLASS NAMES (ลำดับถูกต้อง)
 # =========================
 class_names = [
     "Blight (โรคใบไหม้)",
     "Common Rust (โรคราสนิม)",
-    "Healthy (ใบปกติ)",
-    "Grey Leaf Spot (โรคใบจุดสีเทา)"
+    "Grey Leaf Spot (โรคใบจุดสีเทา)",
+    "Healthy (ใบปกติ)"
 ]
 
 # =========================
@@ -42,23 +41,22 @@ except Exception as e:
     st.stop()
 
 # =========================
-# CHECK MODEL OUTPUT
+# CHECK OUTPUT CLASSES
 # =========================
 num_model_classes = model.output_shape[-1]
 
 if num_model_classes != len(class_names):
     st.error(
         f"❌ จำนวนคลาสไม่ตรงกัน\n\n"
-        f"- โมเดลทำนายได้: {num_model_classes} คลาส\n"
-        f"- class_names มี: {len(class_names)} ชื่อ\n\n"
-        f"กรุณาแก้ class_names ให้ตรงกับโมเดล"
+        f"- โมเดล: {num_model_classes} คลาส\n"
+        f"- class_names: {len(class_names)} ชื่อ"
     )
     st.stop()
 
 # =========================
 # INPUT SHAPE
 # =========================
-_, img_height, img_width, img_channels = model.input_shape
+_, img_height, img_width, _ = model.input_shape
 
 # =========================
 # UPLOAD IMAGE
@@ -69,7 +67,7 @@ uploaded_file = st.file_uploader(
 )
 
 # =========================
-# PREDICTION
+# PREDICT
 # =========================
 if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
@@ -78,29 +76,25 @@ if uploaded_file is not None:
     if st.button("🔍 วิเคราะห์ภาพ"):
         st.info("⏳ กำลังวิเคราะห์...")
 
-        # --- preprocess ---
         img = image.resize((img_width, img_height))
         img_array = np.array(img, dtype=np.float32) / 255.0
         img_array = np.expand_dims(img_array, axis=0)
 
-        # --- predict ---
         prediction = model.predict(img_array)
-        confidence = float(np.max(prediction))
         predicted_class = int(np.argmax(prediction))
+        confidence = float(np.max(prediction))
 
-        # --- result ---
         if confidence < CONFIDENCE_THRESHOLD:
             st.warning(
-                f"⚠️ โมเดลไม่มั่นใจเพียงพอ ({confidence*100:.2f}%)\n\n"
-                "คำแนะนำ:\n"
-                "- ถ่ายภาพให้ชัด\n"
+                f"⚠️ ความมั่นใจต่ำ ({confidence*100:.2f}%)\n\n"
+                "กรุณาถ่ายภาพใหม่:\n"
                 "- ใบเดียวเต็มภาพ\n"
-                "- แสงสว่างเพียงพอ\n"
-                "- หลีกเลี่ยงพื้นหลังรก"
+                "- แสงชัด\n"
+                "- ไม่เบลอ"
             )
         else:
             st.success(f"🌱 ผลการทำนาย: **{class_names[predicted_class]}**")
-            st.write(f"📊 ความมั่นใจของโมเดล: **{confidence*100:.2f}%**")
+            st.write(f"📊 ความมั่นใจ: **{confidence*100:.2f}%**")
 
             st.markdown("### 🔎 ความน่าจะเป็นแต่ละโรค")
             for i in range(num_model_classes):
