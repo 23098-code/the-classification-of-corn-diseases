@@ -15,7 +15,13 @@ st.set_page_config(
 CONFIDENCE_THRESHOLD = 0.50
 
 # =========================
-# CLASS NAMES (ลำดับตรงกับโมเดล)
+# SESSION STATE
+# =========================
+if "open_camera" not in st.session_state:
+    st.session_state.open_camera = False
+
+# =========================
+# CLASS NAMES (ตรงกับโมเดล)
 # =========================
 class_names = [
     "Blight (โรคใบไหม้)",
@@ -28,7 +34,7 @@ class_names = [
 # UI
 # =========================
 st.title("🌽 ระบบจำแนกโรคใบข้าวโพดด้วย AI")
-st.write("ถ่ายรูปหรืออัปโหลดภาพใบข้าวโพดเพื่อวิเคราะห์โรค")
+st.write("กดปุ่มเพื่อถ่ายภาพหรืออัปโหลดรูปใบข้าวโพด")
 
 # =========================
 # LOAD MODEL
@@ -47,22 +53,32 @@ num_model_classes = model.output_shape[-1]
 if num_model_classes != len(class_names):
     st.error(
         f"❌ จำนวนคลาสไม่ตรงกัน\n\n"
-        f"- โมเดล: {num_model_classes} คลาส\n"
-        f"- class_names: {len(class_names)} ชื่อ"
+        f"- โมเดล: {num_model_classes}\n"
+        f"- class_names: {len(class_names)}"
     )
     st.stop()
 
 # =========================
-# INPUT SHAPE
+# IMAGE SHAPE
 # =========================
 _, img_height, img_width, _ = model.input_shape
 
 # =========================
-# IMAGE INPUT
+# CAMERA BUTTON
 # =========================
-st.markdown("## 📷 ถ่ายรูปจากกล้อง")
-camera_image = st.camera_input("เปิดกล้องเพื่อถ่ายรูปใบข้าวโพด")
+st.markdown("## 📷 ถ่ายภาพจากกล้อง")
 
+if not st.session_state.open_camera:
+    if st.button("📸 กดเพื่อเปิดกล้อง"):
+        st.session_state.open_camera = True
+
+camera_image = None
+if st.session_state.open_camera:
+    camera_image = st.camera_input("กล้องพร้อมใช้งานแล้ว")
+
+# =========================
+# UPLOAD IMAGE
+# =========================
 st.markdown("## 📤 หรืออัปโหลดรูปภาพ")
 uploaded_file = st.file_uploader(
     "รองรับ jpg, jpeg, png, jfif, webp",
@@ -70,13 +86,11 @@ uploaded_file = st.file_uploader(
 )
 
 # =========================
-# SELECT IMAGE SOURCE
+# SELECT IMAGE
 # =========================
 image = None
-
 if camera_image is not None:
     image = Image.open(camera_image).convert("RGB")
-
 elif uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
 
@@ -100,10 +114,10 @@ if image is not None:
         if confidence < CONFIDENCE_THRESHOLD:
             st.warning(
                 f"⚠️ ความมั่นใจต่ำ ({confidence*100:.2f}%)\n\n"
-                "คำแนะนำ:\n"
-                "- ถ่ายให้เห็นใบเดียวชัด ๆ\n"
-                "- แสงสว่างเพียงพอ\n"
-                "- ไม่เบลอ ไม่ไกลเกินไป"
+                "กรุณาถ่ายใหม่:\n"
+                "- โฟกัสใบเดียว\n"
+                "- แสงชัด\n"
+                "- ไม่เบลอ"
             )
         else:
             st.success(f"🌱 ผลการทำนาย: **{class_names[predicted_class]}**")
