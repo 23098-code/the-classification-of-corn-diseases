@@ -134,4 +134,3 @@ prediction = model.predict(img_array)
 # =========================
 st.markdown("---")
 st.caption("📌 ระบบต้นแบบเพื่อการศึกษา | Corn Disease Classification with CNN")
-
