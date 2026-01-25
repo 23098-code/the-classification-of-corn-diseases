@@ -77,31 +77,37 @@ if uploaded_file is not None:
     st.image(image, caption="ภาพที่อัปโหลด", use_container_width=True)
 
     # =========================
-    # PREDICT BUTTON
-    # =========================
-    if st.button("🔍 วิเคราะห์ภาพ"):
-        st.info("⏳ กำลังวิเคราะห์...")
+# PREPROCESS IMAGE (SAFE)
+# =========================
+input_shape = model.input_shape
+img_size = input_shape[1]  # เช่น 224
+channels = input_shape[3]  # 3 หรือ 1
 
-        # 1) Resize image (ต้องตรงกับตอนเทรน)
-        image_resized = image.resize((224, 224))
+image_resized = image.resize((img_size, img_size))
 
-        # 2) Convert to array
-        img_array = np.array(image_resized)
+img_array = np.array(image_resized)
 
-        # ถ้าเป็น PNG มี alpha channel
-        if img_array.shape[-1] == 4:
-            img_array = img_array[:, :, :3]
+# ถ้าโมเดลต้องการ grayscale
+if channels == 1:
+    if img_array.ndim == 3:
+        img_array = img_array[:, :, 0]
+    img_array = np.expand_dims(img_array, axis=-1)
 
-        # Normalize
-        img_array = img_array / 255.0
+# ถ้าเป็น RGBA → RGB
+if img_array.ndim == 3 and img_array.shape[-1] == 4:
+    img_array = img_array[:, :, :3]
 
-        # Add batch dimension
-        img_array = np.expand_dims(img_array, axis=0)
+# Normalize
+img_array = img_array / 255.0
 
-        # 3) Predict
-        prediction = model.predict(img_array)
-        predicted_class = np.argmax(prediction)
-        confidence = np.max(prediction) * 100
+# Add batch dimension
+img_array = np.expand_dims(img_array, axis=0)
+
+# =========================
+# PREDICT
+# =========================
+prediction = model.predict(img_array)
+
 
         # =========================
         # RESULT
@@ -128,3 +134,4 @@ if uploaded_file is not None:
 # =========================
 st.markdown("---")
 st.caption("📌 ระบบต้นแบบเพื่อการศึกษา | Corn Disease Classification with CNN")
+
