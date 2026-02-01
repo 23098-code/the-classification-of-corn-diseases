@@ -35,7 +35,6 @@ input_shape = model.input_shape  # (None, H, W, C)
 IMG_HEIGHT = input_shape[1]
 IMG_WIDTH = input_shape[2]
 
-st.info(f"📐 โมเดลต้องการภาพขนาด {IMG_WIDTH} x {IMG_HEIGHT}")
 
 # =========================
 # คลาส (ต้องตรงลำดับตอน train)
@@ -107,7 +106,7 @@ if image is not None:
                 confidence = float(prediction[predicted_index])
 
                 if confidence < 0.5:
-                    st.warning("⚠️ ความมั่นใจต่ำกว่า 50% กรุณาถ่ายภาพใหม่")
+                    st.warning("⚠️ รูปภาพไม่ชัดเจน กรุณาถ่ายภาพใหม่")
                     st.stop()
 
                 predicted_class = class_names[predicted_index]
@@ -115,10 +114,11 @@ if image is not None:
                 st.success(
                     f"✅ ผลการวิเคราะห์: **{class_names_th[predicted_class]}**"
                 )
-                st.write(f"📊 ความมั่นใจ: **{confidence*100:.2f}%**")
+            
 
                 st.subheader("🩺 แนวทางการดูแล")
                 st.info(care_guide[predicted_class])
 
             except Exception as e:
                 st.error(f"❌ วิเคราะห์ไม่สำเร็จ: {e}")
+
