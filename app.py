@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 from PIL import Image
 import tensorflow as tf
+from tensorflow.keras.applications.vgg16 import preprocess_input
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -51,8 +52,9 @@ care_guide = {
 def preprocess_image(image):
     image = image.convert("RGB")
     image = image.resize((224, 224))
-    img_array = np.array(image, dtype=np.float32) / 255.0
+    img_array = np.array(image, dtype=np.float32)
     img_array = np.expand_dims(img_array, axis=0)
+    img_array = preprocess_input(img_array)  # ⭐ สำคัญมาก
     return img_array
 
 # ---------------- INPUT METHOD ----------------
