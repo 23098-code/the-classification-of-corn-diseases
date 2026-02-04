@@ -1,117 +1,127 @@
+import os
 import streamlit as st
 import numpy as np
-import cv2
 from PIL import Image
 from tensorflow.keras.models import load_model
 
-# ===================== CONFIG =====================
-IMG_SIZE = 128
-CONF_THRESHOLD = 0.5
+# -----------------------------
+# ตั้งค่าหน้าเว็บ
+# -----------------------------
+st.set_page_config(
+    page_title="Corn Disease Classification",
+    page_icon="🌽",
+    layout="centered"
+)
 
+st.title("🌽 ระบบจำแนกโรคใบข้าวโพด")
+st.write("อัปโหลดภาพ หรือถ่ายภาพใบข้าวโพดเพื่อวิเคราะห์โรค")
+
+# -----------------------------
+# โหลดโมเดลอย่างปลอดภัย
+# -----------------------------
+MODEL_PATH = "model.h5"
+
+if not os.path.exists(MODEL_PATH):
+    st.error("❌ ไม่พบไฟล์ model.h5 กรุณาอัปโหลดไฟล์โมเดลไว้โฟลเดอร์เดียวกับ app.py")
+    st.stop()
+
+try:
+    model = load_model(MODEL_PATH)
+    st.success("✅ โหลดโมเดลสำเร็จ")
+except Exception as e:
+    st.error(f"❌ โหลดโมเดลไม่สำเร็จ: {e}")
+    st.stop()
+
+# -----------------------------
+# ชื่อคลาส (ต้องตรงกับตอนเทรน)
+# -----------------------------
 class_names = [
-    "Blight (ใบไหม้)",
-    "Common Rust (สนิมใบ)",
-    "Grey Leaf Spot (จุดสีเทา)",
+    "Blight (โรคใบไหม้)",
+    "Common Rust (โรคราสนิม)",
+    "Grey Leaf Spot (โรคใบจุดสีเทา)",
     "Healthy (ใบปกติ)"
 ]
 
-care_guide = {
-    "Blight (ใบไหม้)": "ตัดใบที่เป็นโรคออก ลดความชื้น หลีกเลี่ยงน้ำค้างสะสม",
-    "Common Rust (สนิมใบ)": "กำจัดวัชพืชรอบแปลง ใช้พันธุ์ต้านทาน",
-    "Grey Leaf Spot (จุดสีเทา)": "หลีกเลี่ยงปลูกซ้ำที่เดิม ปรับระยะปลูกให้โปร่ง",
-    "Healthy (ใบปกติ)": "ต้นข้าวโพดสุขภาพดี ดูแลตามปกติ ใส่ปุ๋ยและให้น้ำเหมาะสม"
-}
+# -----------------------------
+# ฟังก์ชัน crop รูป (ซูมเข้าแรงขึ้น)
+# -----------------------------
+def aggressive_center_crop(img, crop_ratio=0.6):
+    """
+    crop_ratio = 0.6 หมายถึง ตัดขอบออก 40%
+    """
+    w, h = img.size
+    new_w = int(w * crop_ratio)
+    new_h = int(h * crop_ratio)
 
-# ===================== LOAD MODEL =====================
-model = load_model("model.h5")
+    left = (w - new_w) // 2
+    top = (h - new_h) // 2
+    right = left + new_w
+    bottom = top + new_h
 
-# ===================== FUNCTIONS =====================
-def aggressive_crop(img):
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(gray, (7, 7), 0)
+    return img.crop((left, top, right, bottom))
 
-    _, thresh = cv2.threshold(
-        blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
-    )
+# -----------------------------
+# ฟังก์ชันเตรียมภาพเข้าโมเดล
+# -----------------------------
+def preprocess_image(img):
+    img = img.resize((128, 128))  # ⚠️ ต้องตรงกับตอนเทรน
+    img = np.array(img) / 255.0
+    img = np.expand_dims(img, axis=0)
+    return img
 
-    contours, _ = cv2.findContours(
-        thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-    )
+# -----------------------------
+# เลือกวิธีรับภาพ
+# -----------------------------
+option = st.radio(
+    "เลือกวิธีใส่ภาพ",
+    ["📤 อัปโหลดภาพ", "📸 ถ่ายภาพจากกล้อง"]
+)
 
-    if not contours:
-        return img, img  # fallback
+uploaded_image = None
 
-    largest = max(contours, key=cv2.contourArea)
-    x, y, w, h = cv2.boundingRect(largest)
-    cropped = img[y:y+h, x:x+w]
-
-    return cropped, img
-
-
-def preprocess_image(pil_img):
-    img = np.array(pil_img.convert("RGB"))
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-
-    cropped, _ = aggressive_crop(img)
-
-    resized = cv2.resize(cropped, (IMG_SIZE, IMG_SIZE))
-    resized = resized / 255.0
-    resized = np.expand_dims(resized, axis=0)
-
-    return resized, cropped
-
-
-# ===================== STREAMLIT UI =====================
-st.set_page_config(page_title="Corn Disease Classification", page_icon="🌽")
-st.title("🌽 ระบบจำแนกโรคใบข้าวโพด")
-st.write("ระบบจะครอปใบอัตโนมัติเพื่อลดฉากหลัง")
-
-source = st.radio("เลือกแหล่งภาพ", ["📷 กล้อง", "📁 อัปโหลดไฟล์"])
-
-image = None
-
-if source == "📷 กล้อง":
-    camera_img = st.camera_input("ถ่ายภาพใบข้าวโพด")
-    if camera_img:
-        image = Image.open(camera_img)
-else:
-    upload = st.file_uploader(
-        "อัปโหลดภาพ",
+if option == "📤 อัปโหลดภาพ":
+    uploaded_image = st.file_uploader(
+        "เลือกไฟล์ภาพ",
         type=["jpg", "jpeg", "png", "jfif", "webp"]
     )
-    if upload:
-        image = Image.open(upload)
+else:
+    uploaded_image = st.camera_input("ถ่ายภาพใบข้าวโพด")
 
-if image:
-    st.subheader("📸 ภาพต้นฉบับ")
+# -----------------------------
+# ถ้ามีภาพ → แสดง + วิเคราะห์
+# -----------------------------
+if uploaded_image is not None:
+    image = Image.open(uploaded_image).convert("RGB")
+
+    st.subheader("📷 ภาพต้นฉบับ")
     st.image(image, use_container_width=True)
 
-    if st.button("🔍 วิเคราะห์"):
+    # crop แรง
+    cropped_image = aggressive_center_crop(image, crop_ratio=0.6)
+
+    st.subheader("✂️ ภาพหลังครอป (ซูมเข้าใบ)")
+    st.image(cropped_image, use_container_width=True)
+
+    if st.button("🔍 วิเคราะห์โรค"):
         try:
-            img_array, cropped_img = preprocess_image(image)
+            img_array = preprocess_image(cropped_image)
+            prediction = model.predict(img_array)
 
-            # แสดงภาพหลังครอป
-            st.subheader("✂️ ภาพหลังครอป (ตัดฉากหลัง)")
-            st.image(
-                cv2.cvtColor(cropped_img, cv2.COLOR_BGR2RGB),
-                use_container_width=True
-            )
+            confidence = float(np.max(prediction))
+            predicted_class = int(np.argmax(prediction))
 
-            preds = model.predict(img_array)[0]
-            best_idx = np.argmax(preds)
-            confidence = preds[best_idx]
+            st.subheader("📊 ผลการวิเคราะห์")
 
-            if confidence < CONF_THRESHOLD:
-                st.warning("⚠️ ความมั่นใจต่ำ กรุณาถ่ายใกล้ขึ้น หรือใช้พื้นหลังเรียบ")
+            # ถ้าความมั่นใจต่ำกว่า 50% → ไม่ฟันธง
+            if confidence < 0.50:
+                st.warning("⚠️ ความมั่นใจต่ำกว่า 50% แนะนำให้ถ่ายภาพใหม่ให้เห็นใบชัดขึ้น")
             else:
-                label = class_names[best_idx]
-                st.success(f"🌱 ผลการทำนาย: {label}")
-                st.write(f"📊 ความมั่นใจ: {confidence*100:.2f}%")
-                st.info(care_guide[label])
+                st.success(f"🌱 ผลการทำนาย: **{class_names[predicted_class]}**")
+                st.write(f"📊 ความมั่นใจ: **{confidence*100:.2f}%**")
 
-                st.subheader("📊 ความน่าจะเป็นแต่ละคลาส")
-                for i, p in enumerate(preds):
-                    st.write(f"- {class_names[i]}: {p*100:.2f}%")
+            st.subheader("📈 ความน่าจะเป็นแต่ละคลาส")
+            for i, prob in enumerate(prediction[0]):
+                st.write(f"- {class_names[i]}: {prob*100:.2f}%")
 
         except Exception as e:
             st.error(f"❌ เกิดข้อผิดพลาดในการวิเคราะห์: {e}")
