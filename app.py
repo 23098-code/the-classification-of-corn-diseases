@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 from PIL import Image
 import tensorflow as tf
-from tensorflow.keras.applications.vgg16 import preprocess_input
+from tensorflow.keras.applications.vgg16 import VGG16, preprocess_input
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -12,21 +12,27 @@ st.set_page_config(
 )
 
 st.title("🌽 ระบบจำแนกโรคใบข้าวโพดด้วย AI")
-st.write("ถ่ายภาพหรืออัปโหลดภาพใบข้าวโพดเพื่อวิเคราะห์โรค")
+st.write("อัปโหลดหรือถ่ายภาพใบข้าวโพดเพื่อวิเคราะห์โรค")
 
-# ---------------- LOAD MODEL ----------------
+# ---------------- LOAD MODELS ----------------
 @st.cache_resource
-def load_model():
-    return tf.keras.models.load_model("model.h5")
+def load_models():
+    feature_extractor = VGG16(
+        weights="imagenet",
+        include_top=False,
+        input_shape=(224, 224, 3)
+    )
+    classifier = tf.keras.models.load_model("model.h5")
+    return feature_extractor, classifier
 
 try:
-    model = load_model()
+    feature_extractor, model = load_models()
     st.success("✅ โหลดโมเดลสำเร็จ")
 except Exception as e:
     st.error(f"❌ โหลดโมเดลไม่สำเร็จ: {e}")
     st.stop()
 
-# ---------------- CLASS NAMES ----------------
+# ---------------- CLASS INFO ----------------
 class_names = [
     "Blight",
     "Common Rust",
@@ -49,13 +55,13 @@ care_guide = {
 }
 
 # ---------------- IMAGE PREPROCESS ----------------
-def preprocess_image(image):
+def prepare_image(image):
     image = image.convert("RGB")
     image = image.resize((224, 224))
-    img_array = np.array(image, dtype=np.float32)
-    img_array = np.expand_dims(img_array, axis=0)
-    img_array = preprocess_input(img_array)  # ⭐ สำคัญมาก
-    return img_array
+    img = np.array(image, dtype=np.float32)
+    img = np.expand_dims(img, axis=0)
+    img = preprocess_input(img)
+    return img
 
 # ---------------- INPUT METHOD ----------------
 method = st.radio(
@@ -80,19 +86,24 @@ if uploaded_file is not None:
 
     if st.button("🔍 วิเคราะห์ภาพ"):
         try:
-            img_array = preprocess_image(image)
-            prediction = model.predict(img_array)[0]
+            img = prepare_image(image)
+
+            # 🔑 STEP สำคัญที่สุด
+            features = feature_extractor.predict(img)
+            features = features.reshape(1, -1)  # (1, 25088)
+
+            prediction = model.predict(features)[0]
 
             confidence = float(np.max(prediction))
-            predicted_index = int(np.argmax(prediction))
-            predicted_class = class_names[predicted_index]
+            idx = int(np.argmax(prediction))
+            disease = class_names[idx]
 
             if confidence < 0.5:
                 st.warning("⚠️ ความมั่นใจต่ำกว่า 50% กรุณาถ่ายภาพใหม่ให้เห็นใบชัดเจน")
             else:
-                st.success(f"🌱 ผลการวิเคราะห์: {class_names_th[predicted_class]}")
+                st.success(f"🌱 ผลการวิเคราะห์: {class_names_th[disease]}")
                 st.write(f"📊 ความมั่นใจ: {confidence*100:.2f}%")
-                st.info(f"🩺 คำแนะนำ: {care_guide[predicted_class]}")
+                st.info(f"🩺 คำแนะนำ: {care_guide[disease]}")
 
         except Exception as e:
             st.error(f"❌ เกิดข้อผิดพลาดในการวิเคราะห์: {e}")
