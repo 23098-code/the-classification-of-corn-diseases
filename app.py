@@ -76,13 +76,6 @@ if image is not None:
             predictions = model.predict(img_array)[0]
 
         # ----------------------
-        # SHOW CONFIDENCE
-        # ----------------------
-        st.subheader("📊 ค่า Confidence ของแต่ละโรค")
-        for name, score in zip(CLASS_NAMES, predictions):
-            st.write(f"- **{name}** : {score:.3f}")
-
-        # ----------------------
         # RESULT WITH THRESHOLD
         # ----------------------
         st.subheader(f"✅ ผลการจำแนก")
@@ -98,4 +91,5 @@ if image is not None:
 
 else:
     st.info("กรุณาอัปโหลดรูปหรือถ่ายภาพก่อน")
+
 
