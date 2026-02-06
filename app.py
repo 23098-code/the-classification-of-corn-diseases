@@ -15,7 +15,7 @@ st.set_page_config(
 )
 
 MODEL_URL = "https://drive.google.com/uc?id=1uU_Oh2dKGaK0C0pym5YMMFKTjQ3FJrwc"
-MODEL_PATH = "corn_disease_model.keras"
+MODEL_PATH = "corn_disease_model.h5"   # <<< สำคัญ
 
 CLASS_NAMES = [
     "Blight",
@@ -28,14 +28,18 @@ IMG_SIZE = 224
 THRESHOLD = 0.5
 
 # -----------------------------
-# LOAD MODEL
+# LOAD MODEL (FIXED)
 # -----------------------------
 @st.cache_resource
 def load_model():
     if not os.path.exists(MODEL_PATH):
         with st.spinner("📥 Downloading model from Google Drive..."):
             gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
-    model = tf.keras.models.load_model(MODEL_PATH)
+
+    model = tf.keras.models.load_model(
+        MODEL_PATH,
+        compile=False   # <<< ตัวแก้ปัญหาหลัก
+    )
     return model
 
 model = load_model()
@@ -58,7 +62,6 @@ if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
     st.image(image, caption="ภาพที่อัปโหลด", use_column_width=True)
 
-    # preprocess
     img = image.resize((IMG_SIZE, IMG_SIZE))
     img_array = np.array(img) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
@@ -69,28 +72,18 @@ if uploaded_file is not None:
 
         st.subheader("📊 ผลการวิเคราะห์")
 
-        detected = False
+        found = False
         for i, score in enumerate(predictions):
             percent = score * 100
             if score >= THRESHOLD:
-                detected = True
+                found = True
                 st.success(f"✅ {CLASS_NAMES[i]} : {percent:.2f}%")
             else:
                 st.write(f"❌ {CLASS_NAMES[i]} : {percent:.2f}%")
 
-        if not detected:
-            st.warning("⚠️ ไม่พบโรคที่มีค่าความมั่นใจเกินเกณฑ์")
+        if not found:
+            st.warning("⚠️ ไม่พบโรคที่มีค่าความมั่นใจเกิน 50%")
 
-        # raw scores (สำหรับรายงาน)
-        with st.expander("🔬 ดูค่าคะแนนดิบ (Raw scores)"):
+        with st.expander("🔬 Raw prediction values"):
             for i, score in enumerate(predictions):
                 st.write(f"{CLASS_NAMES[i]} : {score:.4f}")
-
-# -----------------------------
-# FOOTER
-# -----------------------------
-st.markdown("---")
-st.caption(
-    "โครงงานการจำแนกโรคใบข้าวโพดด้วยเทคนิค Deep Learning "
-    "(Multi-label Image Classification)"
-)
