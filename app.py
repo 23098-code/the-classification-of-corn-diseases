@@ -12,6 +12,8 @@ MODEL_URL = "https://drive.google.com/uc?id=1uU_Oh2dKGaK0C0pym5YMMFKTjQ3FJrwc"
 MODEL_PATH = "model_multilabel.h5"
 
 IMG_SIZE = 128
+THRESHOLD = 0.4
+
 CLASS_NAMES = [
     "blight",
     "common_rust",
@@ -19,15 +21,13 @@ CLASS_NAMES = [
     "healthy"
 ]
 
-THRESHOLD = 0.4
-
 # ======================
 # LOAD MODEL
 # ======================
 @st.cache_resource
 def load_model():
     if not os.path.exists(MODEL_PATH):
-        with st.spinner("Downloading model..."):
+        with st.spinner("📥 กำลังดาวน์โหลดโมเดล..."):
             gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
 
     model = tf.keras.models.load_model(
@@ -42,36 +42,56 @@ model = load_model()
 # ======================
 # UI
 # ======================
-st.title("🌽 Corn Disease Classification (Multi-Label CNN)")
-st.write("อัปโหลดรูปใบข้าวโพด แล้วกดปุ่มเพื่อเริ่มการจำแนก")
+st.title("🌽 Corn Disease Classification")
+st.write("อัปโหลดรูปหรือเปิดกล้องถ่ายใบข้าวโพด แล้วกดปุ่มเพื่อเริ่มการจำแนก")
 
-uploaded_file = st.file_uploader(
-    "📤 เลือกรูปภาพ",
-    type=["jpg", "jpeg", "png"]
+# -------- input method
+input_method = st.radio(
+    "เลือกวิธีใส่ภาพ",
+    ["📁 อัปโหลดรูป", "📷 เปิดกล้อง"]
 )
 
-if uploaded_file is not None:
-    image = Image.open(uploaded_file).convert("RGB")
-    st.image(image, caption="ภาพที่อัปโหลด", use_container_width=True)
+image = None
 
-    # ปุ่มเริ่มจำแนก
+# -------- upload image
+if input_method == "📁 อัปโหลดรูป":
+    uploaded_file = st.file_uploader(
+        "เลือกรูปภาพ",
+        type=["jpg", "jpeg", "png"]
+    )
+    if uploaded_file is not None:
+        image = Image.open(uploaded_file).convert("RGB")
+
+# -------- camera input
+else:
+    camera_file = st.camera_input("ถ่ายภาพใบข้าวโพด")
+    if camera_file is not None:
+        image = Image.open(camera_file).convert("RGB")
+
+# ======================
+# SHOW IMAGE + PREDICT
+# ======================
+if image is not None:
+    st.image(image, caption="ภาพที่ใช้วิเคราะห์", use_container_width=True)
+
     if st.button("🔍 เริ่มจำแนกโรค"):
-        with st.spinner("กำลังวิเคราะห์ภาพ..."):
-            # ===== preprocessing
+        with st.spinner("🧠 กำลังวิเคราะห์..."):
+            # preprocessing
             img = image.resize((IMG_SIZE, IMG_SIZE))
             img_array = np.array(img) / 255.0
             img_array = np.expand_dims(img_array, axis=0)
 
-            # ===== predict
             predictions = model.predict(img_array)[0]
 
-        # ===== results
-        st.subheader("📊 ค่า Confidence ของแต่ละโรค")
+        # -------- show scores
+        st.subheader("📊 ค่า Confidence")
         for label, score in zip(CLASS_NAMES, predictions):
             st.write(f"{label}: **{score:.3f}**")
 
-        st.subheader("✅ ผลการจำแนก (threshold = 0.4)")
+        # -------- threshold result
+        st.subheader(f"✅ ผลการจำแนก (threshold = {THRESHOLD})")
         detected = False
+
         for label, score in zip(CLASS_NAMES, predictions):
             if score >= THRESHOLD:
                 st.success(f"{label} ({score:.2f})")
@@ -81,4 +101,4 @@ if uploaded_file is not None:
             st.info("ไม่พบโรคที่มีค่ามากกว่า threshold")
 
 else:
-    st.info("⬆️ กรุณาอัปโหลดรูปก่อน")
+    st.info("⬆️ กรุณาอัปโหลดรูปหรือถ่ายภาพก่อน")
