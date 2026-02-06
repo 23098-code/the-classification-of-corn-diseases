@@ -85,12 +85,12 @@ if image is not None:
         # ----------------------
         # RESULT WITH THRESHOLD
         # ----------------------
-        st.subheader(f"✅ ผลการจำแนก (Threshold = {THRESHOLD})")
+        st.subheader(f"✅ ผลการจำแนก")
 
         found = False
         for name, score in zip(CLASS_NAMES, predictions):
             if score >= THRESHOLD:
-                st.success(f"{name} ({score:.2f})")
+                st.success(f"{name} ")
                 found = True
 
         if not found:
@@ -98,3 +98,4 @@ if image is not None:
 
 else:
     st.info("กรุณาอัปโหลดรูปหรือถ่ายภาพก่อน")
+
