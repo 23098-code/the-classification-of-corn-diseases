@@ -5,15 +5,13 @@ from PIL import Image
 import gdown
 import os
 
-from tensorflow.keras.applications.efficientnet import preprocess_input
-
 # ======================
-# CONFIG
+# CONFIG (ต้องตรงกับตอนเทรน)
 # ======================
 MODEL_URL = "https://drive.google.com/uc?id=1uU_Oh2dKGaK0C0pym5YMMFKTjQ3FJrwc"
-MODEL_PATH = "model.keras"
+MODEL_PATH = "model_multilabel.h5"
 
-IMG_SIZE = 224
+IMG_SIZE = 128
 CLASS_NAMES = [
     "blight",
     "common_rust",
@@ -21,7 +19,7 @@ CLASS_NAMES = [
     "healthy"
 ]
 
-THRESHOLD = 0.5  # สำหรับ multi-label
+THRESHOLD = 0.5
 
 # ======================
 # LOAD MODEL
@@ -32,7 +30,11 @@ def load_model():
         with st.spinner("Downloading model..."):
             gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
 
-    model = tf.keras.models.load_model(MODEL_PATH)
+    # สำคัญมาก!
+    model = tf.keras.models.load_model(
+        MODEL_PATH,
+        compile=False
+    )
     return model
 
 
@@ -41,7 +43,7 @@ model = load_model()
 # ======================
 # UI
 # ======================
-st.title("🌽 Corn Disease Classification (Multi-Label)")
+st.title("🌽 Corn Disease Classification (Multi-Label CNN)")
 st.write("Upload an image of corn leaf")
 
 uploaded_file = st.file_uploader(
@@ -56,27 +58,24 @@ if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
     st.image(image, caption="Uploaded Image", use_container_width=True)
 
-    # preprocessing
+    # ===== preprocessing (เหมือนตอนเทรน)
     img = image.resize((IMG_SIZE, IMG_SIZE))
-    img_array = np.array(img)
-    img_array = preprocess_input(img_array)
+    img_array = np.array(img) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
 
-    # predict
+    # ===== predict
     predictions = model.predict(img_array)[0]
 
-    st.subheader("Prediction Results")
-
-    detected = False
+    st.subheader("Prediction Scores")
     for label, score in zip(CLASS_NAMES, predictions):
         st.write(f"{label}: **{score:.3f}**")
-        if score >= THRESHOLD:
-            detected = True
 
     st.subheader("Detected Diseases")
-    if detected:
-        for label, score in zip(CLASS_NAMES, predictions):
-            if score >= THRESHOLD:
-                st.success(f"{label} ({score:.2f})")
-    else:
+    detected = False
+    for label, score in zip(CLASS_NAMES, predictions):
+        if score >= THRESHOLD:
+            st.success(f"{label} ({score:.2f})")
+            detected = True
+
+    if not detected:
         st.info("No disease detected above threshold")
