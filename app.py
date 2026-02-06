@@ -42,63 +42,59 @@ model = load_model()
 # ======================
 # UI
 # ======================
-st.title("🌽 Corn Disease Classification")
-st.write("อัปโหลดรูปหรือเปิดกล้องถ่ายใบข้าวโพด แล้วกดปุ่มเพื่อเริ่มการจำแนก")
+st.title("🌽 ระบบจำแนกโรคใบข้าวโพดด้วย Deep Learning")
+st.write("อัปโหลดรูปหรือถ่ายภาพใบข้าวโพด แล้วกดปุ่มเพื่อเริ่มการจำแนก")
 
-# -------- input method
-input_method = st.radio(
+method = st.radio(
     "เลือกวิธีใส่ภาพ",
     ["📁 อัปโหลดรูป", "📷 เปิดกล้อง"]
 )
 
 image = None
 
-# -------- upload image
-if input_method == "📁 อัปโหลดรูป":
-    uploaded_file = st.file_uploader(
-        "เลือกรูปภาพ",
-        type=["jpg", "jpeg", "png"]
-    )
-    if uploaded_file is not None:
-        image = Image.open(uploaded_file).convert("RGB")
-
-# -------- camera input
+if method == "📁 อัปโหลดรูป":
+    file = st.file_uploader("เลือกรูปภาพ", type=["jpg", "png", "jpeg"])
+    if file is not None:
+        image = Image.open(file).convert("RGB")
 else:
-    camera_file = st.camera_input("ถ่ายภาพใบข้าวโพด")
-    if camera_file is not None:
-        image = Image.open(camera_file).convert("RGB")
+    cam = st.camera_input("ถ่ายภาพใบข้าวโพด")
+    if cam is not None:
+        image = Image.open(cam).convert("RGB")
 
 # ======================
-# SHOW IMAGE + PREDICT
+# SHOW IMAGE
 # ======================
 if image is not None:
-    st.image(image, caption="ภาพที่ใช้วิเคราะห์", use_container_width=True)
+    st.image(image, caption="ภาพที่ใช้ในการจำแนก", use_container_width=True)
 
     if st.button("🔍 เริ่มจำแนกโรค"):
         with st.spinner("🧠 กำลังวิเคราะห์..."):
-            # preprocessing
             img = image.resize((IMG_SIZE, IMG_SIZE))
             img_array = np.array(img) / 255.0
             img_array = np.expand_dims(img_array, axis=0)
 
             predictions = model.predict(img_array)[0]
 
-        # -------- show scores
-        st.subheader("📊 ค่า Confidence")
-        for label, score in zip(CLASS_NAMES, predictions):
-            st.write(f"{label}: **{score:.3f}**")
+        # ----------------------
+        # SHOW CONFIDENCE
+        # ----------------------
+        st.subheader("📊 ค่า Confidence ของแต่ละโรค")
+        for name, score in zip(CLASS_NAMES, predictions):
+            st.write(f"- **{name}** : {score:.3f}")
 
-        # -------- threshold result
-        st.subheader(f"✅ ผลการจำแนก (threshold = {THRESHOLD})")
-        detected = False
+        # ----------------------
+        # RESULT WITH THRESHOLD
+        # ----------------------
+        st.subheader(f"✅ ผลการจำแนก (Threshold = {THRESHOLD})")
 
-        for label, score in zip(CLASS_NAMES, predictions):
+        found = False
+        for name, score in zip(CLASS_NAMES, predictions):
             if score >= THRESHOLD:
-                st.success(f"{label} ({score:.2f})")
-                detected = True
+                st.success(f"{name} ({score:.2f})")
+                found = True
 
-        if not detected:
-            st.info("ไม่พบโรคที่มีค่ามากกว่า threshold")
+        if not found:
+            st.info("ไม่พบโรคที่มีค่า confidence สูงกว่า threshold")
 
 else:
-    st.info("⬆️ กรุณาอัปโหลดรูปหรือถ่ายภาพก่อน")
+    st.info("กรุณาอัปโหลดรูปหรือถ่ายภาพก่อน")
