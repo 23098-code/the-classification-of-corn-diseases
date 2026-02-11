@@ -8,8 +8,8 @@ import os
 # ======================
 # CONFIG
 # ======================
-MODEL_URL = "https://drive.google.com/uc?id=1uU_Oh2dKGaK0C0pym5YMMFKTjQ3FJrwc"
-MODEL_PATH = "model_multilabel.h5"
+MODEL_URL = "https://drive.google.com/file/d/1VTQHj3hPsBoG2W-iiQ7PGPUi8ZROgVg6/view?usp=drivesdk"
+MODEL_PATH = "model.json"
 
 IMG_SIZE = 128
 THRESHOLD = 0.4
@@ -91,5 +91,6 @@ if image is not None:
 
 else:
     st.info("กรุณาอัปโหลดรูปหรือถ่ายภาพก่อน")
+
 
 
