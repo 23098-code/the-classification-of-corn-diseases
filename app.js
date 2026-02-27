@@ -1,4 +1,4 @@
-const MODEL_PATH = "./model/";
+const MODEL_PATH = "./my_model/";
 
 let model;
 let webcam;
