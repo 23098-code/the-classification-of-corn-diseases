@@ -1,6 +1,6 @@
-const MODEL_PATH = location.href.includes("github.io")
-    ? "/the-classification-of-corn-diseases/my_model/"
-    : "./my_model/";
+const MODEL_PATH = location.hostname.includes("github.io")
+  ? "/the-classification-of-corn-diseases/my_model/"
+  : "./my_model/";
 
 let model;
 let webcam;
