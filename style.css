@@ -1,0 +1,108 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c7744);
+    color: white;
+    display: flex;
+    justify-content: center;
+}
+
+.app {
+    max-width: 420px;
+    width: 100%;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+header h1 {
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+header p {
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+.camera-card {
+    background: rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 10px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+}
+
+#webcam-container canvas,
+#webcam-container img {
+    width: 100%;
+    border-radius: 15px;
+}
+
+.button-group {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 15px;
+}
+
+.btn {
+    flex: 1;
+    margin: 5px;
+    padding: 10px;
+    border-radius: 12px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.primary {
+    background: #1b5e20;
+    color: white;
+}
+
+.secondary {
+    background: #2e7d32;
+    color: white;
+}
+
+.accent {
+    background: #00c853;
+    color: #003300;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    opacity: 0.9;
+}
+
+.upload-card {
+    margin-top: 20px;
+    text-align: center;
+}
+
+#uploadInput {
+    margin-bottom: 10px;
+}
+
+.result-card {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 10px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #00e676;
+}
